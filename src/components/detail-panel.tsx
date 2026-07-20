@@ -7,6 +7,7 @@ interface DetailPanelProps {
   pr: PullRequest;
   subs: SubscriptionManager;
   subVersion: number;
+  loading?: boolean;
 }
 
 function relativeTime(dateStr?: string): string {
@@ -168,6 +169,7 @@ export function DetailPanel({
   pr,
   subs,
   subVersion,
+  loading,
 }: DetailPanelProps) {
   const checks = pr.statusCheckRollup ?? [];
   const mergeStatus = mergeableLabel(pr.mergeable);
@@ -189,9 +191,12 @@ export function DetailPanel({
         <Text bold>
           PR #{pr.number} — {pr.title}
         </Text>
-        <Text color="cyan" bold>
-          {isSubscribed ? "◆ subscribed" : ""}
-        </Text>
+        <Box gap={1}>
+          {loading && <Text color="yellow">loading…</Text>}
+          <Text color="cyan" bold>
+            {isSubscribed ? "◆ subscribed" : ""}
+          </Text>
+        </Box>
       </Box>
 
       <Box marginTop={1} gap={2}>

@@ -7,6 +7,7 @@ interface HelpOverlayProps {
 
 const HELP_ITEMS = [
   { key: "↑ ↓ / j k", desc: "Navigate list" },
+  { key: "[ / ]", desc: "Previous / next page" },
   { key: "g / G", desc: "Go to top / bottom" },
   { key: "Enter", desc: "Toggle detail panel" },
   { key: "Esc", desc: "Close panel / cancel search" },

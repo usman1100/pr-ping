@@ -7,6 +7,8 @@ interface StatusBarProps {
   prCount: number;
   readyCount: number;
   subCount: number;
+  currentPage: number;
+  totalPages: number;
   pollInterval: number;
   lastUpdated: Date | null;
   error: string | null;
@@ -30,6 +32,8 @@ export function StatusBar({
   prCount,
   readyCount,
   subCount,
+  currentPage,
+  totalPages,
   pollInterval,
   lastUpdated,
   error,
@@ -73,6 +77,11 @@ export function StatusBar({
       </Box>
 
       <Box gap={1}>
+        {totalPages > 1 && (
+          <Text dimColor>
+            {currentPage}/{totalPages}
+          </Text>
+        )}
         {loading && !error && (
           <Text dimColor>refreshing…</Text>
         )}
