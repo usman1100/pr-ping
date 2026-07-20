@@ -9,7 +9,7 @@ Built with [Ink](https://github.com/vadimdemedes/ink) + React.
 ### Quick (curl pipe)
 
 ```sh
-curl -fsSL https://github.com/usman1100/pr-ping/releases/latest/download/pr-ping-install.sh | bash
+curl -fsSL https://github.com/usman1100/pr-ping/releases/latest/download/install.sh | bash
 ```
 
 Installs to `/usr/local/bin`. Set `PR_PING_INSTALL_DIR` to change the target directory.
