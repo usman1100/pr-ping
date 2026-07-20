@@ -9,7 +9,7 @@ import { StatusBar } from "./components/status-bar";
 import { HelpOverlay } from "./components/help-overlay";
 import type { PullRequest, ViewMode } from "./types";
 
-const POLL_INTERVAL = 5000;
+const POLL_INTERVAL = 20000;
 const subs = new SubscriptionManager();
 
 interface AppProps {
@@ -23,7 +23,7 @@ function openURL(url: string) {
 
 function copyURL(url: string) {
   if (process.platform !== "darwin") return;
-  Bun.spawnSync({ cmd: ["pbcopy"], stdin: "pipe" } as any);
+  Bun.spawnSync(["pbcopy"], { input: url } as any);
 }
 
 export default function App({ repoPath }: AppProps) {
@@ -190,8 +190,9 @@ export default function App({ repoPath }: AppProps) {
   );
 
   const contentHeight = rows - 2; // minus tab bar and status bar
-  const detailHeight =
-    detailPr ? Math.min(18, Math.floor(contentHeight * 0.45)) : 0;
+  const detailHeight = detailPr
+    ? Math.min(18, Math.floor(contentHeight * 0.45))
+    : 0;
 
   return (
     <Box width={columns} height={rows} flexDirection="column">
@@ -222,11 +223,7 @@ export default function App({ repoPath }: AppProps) {
               />
             </Box>
             <Box height={detailHeight} overflowY="hidden">
-              <DetailPanel
-                pr={detailPr}
-                subs={subs}
-                subVersion={subVersion}
-              />
+              <DetailPanel pr={detailPr} subs={subs} subVersion={subVersion} />
             </Box>
           </Box>
         ) : (

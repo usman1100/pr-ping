@@ -18,13 +18,15 @@ export function usePRs(
   const [readyCount, setReadyCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const trackerRef = useRef(new StateTracker());
-  const fetchRef = useRef<() => void>(undefined);
+  const fetchRef = useRef<() => Promise<void>>(undefined);
+  const fetchIdRef = useRef(0);
 
   const searchQuery =
     viewMode.type === "search" ? viewMode.query : undefined;
   const viewType = viewMode.type;
 
-  const fetch = useCallback(() => {
+  const fetch = useCallback(async () => {
+    const id = ++fetchIdRef.current;
     try {
       let search: string | undefined;
       let author: string | undefined;
@@ -33,7 +35,9 @@ export function usePRs(
       } else if (viewType === "mine") {
         author = "@me";
       }
-      const data = fetchPRs(repoPath, search, author);
+      const data = await fetchPRs(repoPath, search, author);
+
+      if (id !== fetchIdRef.current) return;
 
       let filtered = data;
       if (viewType === "subscribed") {
@@ -56,6 +60,7 @@ export function usePRs(
         }
       }
     } catch (err) {
+      if (id !== fetchIdRef.current) return;
       if (err instanceof RateLimitError) {
         setError("Rate limit hit");
       } else {
@@ -68,7 +73,7 @@ export function usePRs(
 
   useEffect(() => {
     fetch();
-    const id = setInterval(() => fetchRef.current?.(), pollInterval);
+    const id = setInterval(() => { fetchRef.current?.(); }, pollInterval);
     return () => clearInterval(id);
   }, [fetch, pollInterval]);
 

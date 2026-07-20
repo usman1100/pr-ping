@@ -15,11 +15,11 @@ export function checkAuth(): void {
   }
 }
 
-export function fetchPRs(
+export async function fetchPRs(
   cwd: string,
   search?: string,
   author?: string,
-): PullRequest[] {
+): Promise<PullRequest[]> {
   const args = [
     "gh",
     "pr",
@@ -34,10 +34,14 @@ export function fetchPRs(
   } else if (author) {
     args.push("--author", author);
   }
-  const result = Bun.spawnSync(args, { cwd });
+  const proc = Bun.spawn(args, { cwd });
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  const exitCode = await proc.exited;
 
-  if (result.exitCode !== 0) {
-    const stderr = result.stderr.toString();
+  if (exitCode !== 0) {
     if (
       stderr.toLowerCase().includes("rate limit") ||
       stderr.toLowerCase().includes("rate_limit")
@@ -47,5 +51,5 @@ export function fetchPRs(
     throw new Error(`gh pr list failed: ${stderr}`);
   }
 
-  return JSON.parse(result.stdout.toString()) as PullRequest[];
+  return JSON.parse(stdout) as PullRequest[];
 }
