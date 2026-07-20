@@ -33,6 +33,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # compiled binary
 pr-ping
 
+# release build artifacts
+dist
+
 # Finder (MacOS) folder config
 .DS_Store
 *.bun-build
