@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-const CONFIG_DIR = `${process.env.HOME}/.config/gh-pr-monitor`;
+const CONFIG_DIR = `${process.env.HOME}/.config/pr-ping`;
 const FILE = `${CONFIG_DIR}/subscriptions.json`;
 
 export class SubscriptionManager {

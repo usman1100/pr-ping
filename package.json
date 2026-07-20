@@ -1,5 +1,5 @@
 {
-  "name": "gh-pr-monitor",
+  "name": "pr-ping",
   "module": "src/index.tsx",
   "type": "module",
   "private": true,
