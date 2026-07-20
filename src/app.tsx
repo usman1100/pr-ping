@@ -264,7 +264,9 @@ export default function App({ repoConfig }: AppProps) {
         paddingY={0}
         overflowY="hidden"
       >
-        {detailPr ? (
+        {showHelp ? (
+          <Box flexGrow={1} />
+        ) : detailPr ? (
           <Box flexDirection="column" flexGrow={1}>
             <Box flexGrow={1} overflowY="hidden">
               <PRList
