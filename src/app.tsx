@@ -1,36 +1,53 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Box, Text, useInput, useApp } from "ink";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { Box, Text, useInput, useApp, useWindowSize } from "ink";
 import { usePRs } from "./hooks/use-prs";
 import { SubscriptionManager } from "./lib/subscriptions";
-import { Header } from "./components/header";
+import { TabBar, getViewModeFromKey } from "./components/tab-bar";
 import { PRList } from "./components/pr-list";
 import { DetailPanel } from "./components/detail-panel";
-import { Footer } from "./components/footer";
-import type { PullRequest } from "./types";
+import { StatusBar } from "./components/status-bar";
+import { HelpOverlay } from "./components/help-overlay";
+import type { PullRequest, ViewMode } from "./types";
 
 const POLL_INTERVAL = 5000;
-
 const subs = new SubscriptionManager();
 
 interface AppProps {
   repoPath: string;
 }
 
+function openURL(url: string) {
+  const cmd = process.platform === "darwin" ? "open" : "xdg-open";
+  Bun.spawnSync([cmd, url]);
+}
+
+function copyURL(url: string) {
+  if (process.platform !== "darwin") return;
+  Bun.spawnSync({ cmd: ["pbcopy"], stdin: "pipe" } as any);
+}
+
 export default function App({ repoPath }: AppProps) {
   const { exit } = useApp();
-  const [searchTerm, setSearchTerm] = useState<string>();
-  const { prs, error, readyCount, refresh } = usePRs(
+  const { columns, rows } = useWindowSize();
+
+  const [viewMode, setViewMode] = useState<ViewMode>({ type: "all" });
+  const { prs, error, readyCount, lastUpdated, refresh } = usePRs(
     POLL_INTERVAL,
     repoPath,
     subs,
-    searchTerm,
+    viewMode,
   );
   const [cursor, setCursor] = useState(0);
   const [detailPr, setDetailPr] = useState<PullRequest | null>(null);
+  const [subVersion, setSubVersion] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
 
+  // Search state
   const [searchMode, setSearchMode] = useState(false);
   const [searchBuffer, setSearchBuffer] = useState("");
-  const [subVersion, setSubVersion] = useState(0);
+
+  // Track previous view mode for restoring after search
+  const prevViewModeRef = useRef<ViewMode>({ type: "all" });
 
   useEffect(() => {
     if (cursor >= prs.length && prs.length > 0) {
@@ -43,14 +60,52 @@ export default function App({ repoPath }: AppProps) {
     setSubVersion((v) => v + 1);
   }, []);
 
+  // Tab count badges
+  const allCount = prs.length;
+  const mineCount = prs.filter((p) => p.author?.login).length;
+  const subCount = prs.filter((p) => subs.has(p.number)).length;
+  const tabCounts: Record<string, number> = {
+    "1": allCount,
+    "2": mineCount,
+    "3": subCount,
+  };
+
+  // Navigation input — inactive during search mode or help
   useInput(
-    (_input, key) => {
+    (input, key) => {
+      if (showHelp) {
+        if (input === "?" || key.escape) {
+          setShowHelp(false);
+        }
+        return;
+      }
+
+      // Navigation
       if (key.upArrow && cursor > 0) {
         setCursor((c) => c - 1);
       }
       if (key.downArrow && cursor < prs.length - 1) {
         setCursor((c) => c + 1);
       }
+      if ((key.upArrow || key.downArrow) && detailPr) {
+        // Re-evaluate detail PR on cursor change
+      }
+
+      // Vim keys
+      if (input === "k" && cursor > 0) {
+        setCursor((c) => c - 1);
+      }
+      if (input === "j" && cursor < prs.length - 1) {
+        setCursor((c) => c + 1);
+      }
+      if (input === "g" && !key.ctrl) {
+        setCursor(0);
+      }
+      if (input === "G") {
+        setCursor(prs.length - 1);
+      }
+
+      // Detail toggle
       if (key.return && prs[cursor]) {
         setDetailPr((prev) =>
           prev?.number === prs[cursor]!.number ? null : prs[cursor]!,
@@ -59,31 +114,71 @@ export default function App({ repoPath }: AppProps) {
       if (key.escape) {
         setDetailPr(null);
       }
-      if (_input === "q") {
-        exit();
+
+      // Tabs
+      const tabMode = getViewModeFromKey(input);
+      if (tabMode) {
+        setViewMode(tabMode);
+        setCursor(0);
+        setDetailPr(null);
       }
-      if (_input === "r") {
-        refresh();
-      }
-      if (_input === "/") {
+
+      // Search
+      if (input === "/") {
+        prevViewModeRef.current = viewMode;
         setSearchMode(true);
         setSearchBuffer("");
       }
-      if (_input === "s" && prs[cursor]) {
+
+      // Subscribe
+      if (input === "s" && prs[cursor]) {
         toggleSub(prs[cursor]!.number);
+        // If on subscribed tab, re-render will reflect the change
+        if (viewMode.type === "subscribed") {
+          refresh();
+        }
+      }
+
+      // Open in browser
+      if (input === "o" && prs[cursor]) {
+        openURL(prs[cursor]!.url);
+      }
+
+      // Copy URL
+      if (input === "y" && prs[cursor]) {
+        copyURL(prs[cursor]!.url);
+      }
+
+      // Refresh
+      if (input === "r") {
+        refresh();
+      }
+
+      // Help
+      if (input === "?") {
+        setShowHelp(true);
+      }
+
+      // Quit
+      if (input === "q") {
+        exit();
       }
     },
     { isActive: !searchMode },
   );
 
+  // Search input — only active during search mode
   useInput(
     (input, key) => {
       if (key.escape) {
         setSearchMode(false);
         setSearchBuffer("");
-        setSearchTerm(undefined);
       } else if (key.return) {
-        setSearchTerm(searchBuffer || undefined);
+        if (searchBuffer) {
+          setViewMode({ type: "search", query: searchBuffer });
+          setCursor(0);
+          setDetailPr(null);
+        }
         setSearchMode(false);
       } else if (key.backspace) {
         setSearchBuffer((q) => q.slice(0, -1));
@@ -94,55 +189,70 @@ export default function App({ repoPath }: AppProps) {
     { isActive: searchMode },
   );
 
+  const contentHeight = rows - 2; // minus tab bar and status bar
+  const detailHeight =
+    detailPr ? Math.min(18, Math.floor(contentHeight * 0.45)) : 0;
+
   return (
-    <Box flexDirection="column" width="100%">
-      <Header
+    <Box width={columns} height={rows} flexDirection="column">
+      <TabBar
+        activeTab={viewMode}
         repoPath={repoPath}
-        prCount={prs.length}
-        readyCount={readyCount}
-        pollInterval={POLL_INTERVAL}
-        searchTerm={searchTerm}
-        subCount={subs.count}
+        counts={tabCounts}
+        searchMode={searchMode}
+        searchBuffer={searchBuffer}
       />
 
       <Box
-        borderStyle="round"
-        borderColor="gray"
+        flexGrow={1}
         flexDirection="column"
-        paddingX={1}
-        marginX={0}
+        paddingX={0}
+        paddingY={0}
+        overflowY="hidden"
       >
-        {searchMode && (
-          <Box marginBottom={1}>
-            <Text bold color="cyan">
-              /{" "}
-            </Text>
-            <Text>{searchBuffer}</Text>
-            <Text>│</Text>
+        {detailPr ? (
+          <Box flexDirection="column" flexGrow={1}>
+            <Box flexGrow={1} overflowY="hidden">
+              <PRList
+                prs={prs}
+                cursor={cursor}
+                error={error}
+                subs={subs}
+                subVersion={subVersion}
+              />
+            </Box>
+            <Box height={detailHeight} overflowY="hidden">
+              <DetailPanel
+                pr={detailPr}
+                subs={subs}
+                subVersion={subVersion}
+              />
+            </Box>
           </Box>
-        )}
-
-        <PRList
-          prs={prs}
-          cursor={cursor}
-          error={error}
-          searchMode={!!searchTerm}
-          subs={subs}
-          subVersion={subVersion}
-        />
-
-        {detailPr && (
-          <DetailPanel pr={detailPr} subs={subs} subVersion={subVersion} />
+        ) : (
+          <Box flexGrow={1} overflowY="hidden">
+            <PRList
+              prs={prs}
+              cursor={cursor}
+              error={error}
+              subs={subs}
+              subVersion={subVersion}
+            />
+          </Box>
         )}
       </Box>
 
-      {detailPr && (
-        <Box paddingX={2} paddingY={0}>
-          <Text dimColor>ESC close · Enter toggle · s subscribe</Text>
-        </Box>
-      )}
+      <StatusBar
+        viewMode={viewMode}
+        prCount={prs.length}
+        readyCount={readyCount}
+        subCount={subs.count}
+        pollInterval={POLL_INTERVAL}
+        lastUpdated={lastUpdated}
+        error={error}
+      />
 
-      <Footer searchMode={searchMode} />
+      {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
     </Box>
   );
 }

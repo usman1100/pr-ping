@@ -16,13 +16,37 @@ export interface Review {
   author?: PRAuthor | null;
 }
 
+export interface Label {
+  name: string;
+  color?: string;
+}
+
+export interface ReviewRequest {
+  requestedReviewer?: {
+    __typename?: string;
+    login: string;
+  };
+}
+
 export interface PullRequest {
   number: number;
   title: string;
+  body?: string;
+  state?: string;
   mergeable: string;
   isDraft?: boolean;
   author?: PRAuthor | null;
+  createdAt?: string;
+  updatedAt?: string;
+  labels?: Label[];
   reviews?: Review[] | null;
+  reviewRequests?: ReviewRequest[] | null;
   statusCheckRollup: StatusCheck[] | null;
   url: string;
 }
+
+export type ViewMode =
+  | { type: "all" }
+  | { type: "mine" }
+  | { type: "subscribed" }
+  | { type: "search"; query: string };

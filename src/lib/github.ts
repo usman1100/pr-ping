@@ -15,7 +15,11 @@ export function checkAuth(): void {
   }
 }
 
-export function fetchPRs(cwd: string, search?: string): PullRequest[] {
+export function fetchPRs(
+  cwd: string,
+  search?: string,
+  author?: string,
+): PullRequest[] {
   const args = [
     "gh",
     "pr",
@@ -23,10 +27,12 @@ export function fetchPRs(cwd: string, search?: string): PullRequest[] {
     "--limit",
     "100",
     "--json",
-    "number,title,author,mergeable,isDraft,reviews,statusCheckRollup,url",
+    "number,title,body,state,createdAt,updatedAt,author,mergeable,isDraft,labels,reviews,reviewRequests,statusCheckRollup,url",
   ];
   if (search) {
     args.push("--search", search);
+  } else if (author) {
+    args.push("--author", author);
   }
   const result = Bun.spawnSync(args, { cwd });
 
