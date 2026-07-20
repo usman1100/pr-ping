@@ -6,7 +6,7 @@ import App from "./app";
 
 const repoPath = process.argv[2];
 if (!repoPath) {
-  console.error("Usage: gh-watch <repo-path>");
+  console.error("Usage: pr-ping <repo-path>");
   process.exit(1);
 }
 

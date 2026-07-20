@@ -31,7 +31,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .idea
 
 # compiled binary
-gh-watch
+pr-ping
 
 # Finder (MacOS) folder config
 .DS_Store
