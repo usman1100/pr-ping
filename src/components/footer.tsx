@@ -1,12 +1,22 @@
 import React from "react";
 import { Box, Text } from "ink";
 
-export function Footer() {
+interface FooterProps {
+  searchMode: boolean;
+}
+
+export function Footer({ searchMode }: FooterProps) {
   return (
     <Box justifyContent="center" paddingX={1} paddingBottom={1}>
-      <Text dimColor>
-        ↑↓ nav · Enter detail · r refresh · q quit
-      </Text>
+      {searchMode ? (
+        <Text dimColor>
+          type to search · Enter search · Esc cancel
+        </Text>
+      ) : (
+        <Text dimColor>
+          ↑↓ nav · Enter detail · / search · r refresh · q quit
+        </Text>
+      )}
     </Box>
   );
 }

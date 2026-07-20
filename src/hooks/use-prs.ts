@@ -1,12 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { fetchMyPRs, RateLimitError } from "../lib/github";
+import { fetchPRs, RateLimitError } from "../lib/github";
 import { StateTracker, computeReady } from "../lib/state";
 import { createNotifier } from "../notifier";
 import type { PullRequest } from "../types";
 
 const notifier = createNotifier();
 
-export function usePRs(pollInterval: number, repoPath: string) {
+export function usePRs(
+  pollInterval: number,
+  repoPath: string,
+  searchTerm?: string,
+) {
   const [prs, setPRs] = useState<PullRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [readyCount, setReadyCount] = useState(0);
@@ -15,7 +19,7 @@ export function usePRs(pollInterval: number, repoPath: string) {
 
   const fetch = useCallback(() => {
     try {
-      const data = fetchMyPRs(repoPath);
+      const data = fetchPRs(repoPath, searchTerm);
       const newlyReady = trackerRef.current.update(data);
       setPRs(data);
       setReadyCount(data.filter((pr) => computeReady(pr)).length);
@@ -31,7 +35,7 @@ export function usePRs(pollInterval: number, repoPath: string) {
         setError(err instanceof Error ? err.message : String(err));
       }
     }
-  }, []);
+  }, [repoPath, searchTerm]);
 
   fetchRef.current = fetch;
 
@@ -39,7 +43,7 @@ export function usePRs(pollInterval: number, repoPath: string) {
     fetch();
     const id = setInterval(() => fetchRef.current?.(), pollInterval);
     return () => clearInterval(id);
-  }, [pollInterval, repoPath]);
+  }, [fetch, pollInterval]);
 
   return { prs, error, readyCount, refresh: fetch };
 }

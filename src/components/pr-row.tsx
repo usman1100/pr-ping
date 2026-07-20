@@ -5,6 +5,7 @@ import type { PullRequest, StatusCheck } from "../types";
 interface PRRowProps {
   pr: PullRequest;
   isSelected: boolean;
+  showAuthor: boolean;
 }
 
 function mergeableBadge(mergeable: string): { label: string; color: string } {
@@ -58,7 +59,7 @@ function checkSymbol(check: StatusCheck): string {
   }
 }
 
-export function PRRow({ pr, isSelected }: PRRowProps) {
+export function PRRow({ pr, isSelected, showAuthor }: PRRowProps) {
   const mergeStatus = mergeableBadge(pr.mergeable);
   const checks = pr.statusCheckRollup ?? [];
   const prefix = isSelected ? "▸" : " ";
@@ -78,12 +79,14 @@ export function PRRow({ pr, isSelected }: PRRowProps) {
       </Box>
 
       <Box flexGrow={1} marginRight={1}>
-        <Text
-          bold={isSelected}
-          dimColor={!isSelected}
-          wrap="truncate-end"
-        >
-          {pr.title}
+        <Text bold={isSelected} wrap="truncate-end">
+          <Text dimColor={!isSelected}>{pr.title}</Text>
+          {showAuthor && pr.author && (
+            <Text dimColor>
+              {" "}
+              @{pr.author.login}
+            </Text>
+          )}
         </Text>
       </Box>
 

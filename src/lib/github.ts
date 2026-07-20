@@ -15,19 +15,20 @@ export function checkAuth(): void {
   }
 }
 
-export function fetchMyPRs(cwd: string): PullRequest[] {
-  const result = Bun.spawnSync(
-    [
-      "gh",
-      "pr",
-      "list",
-      "--author",
-      "@me",
-      "--json",
-      "number,title,mergeable,isDraft,statusCheckRollup,url",
-    ],
-    { cwd },
-  );
+export function fetchPRs(cwd: string, search?: string): PullRequest[] {
+  const args = [
+    "gh",
+    "pr",
+    "list",
+    "--json",
+    "number,title,author,mergeable,isDraft,statusCheckRollup,url",
+  ];
+  if (search) {
+    args.push("--search", search);
+  } else {
+    args.push("--author", "@me");
+  }
+  const result = Bun.spawnSync(args, { cwd });
 
   if (result.exitCode !== 0) {
     const stderr = result.stderr.toString();

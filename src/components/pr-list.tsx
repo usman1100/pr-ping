@@ -7,9 +7,10 @@ interface PRListProps {
   prs: PullRequest[];
   cursor: number;
   error: string | null;
+  searchMode: boolean;
 }
 
-export function PRList({ prs, cursor, error }: PRListProps) {
+export function PRList({ prs, cursor, error, searchMode }: PRListProps) {
   if (error) {
     return (
       <Box paddingY={1}>
@@ -47,7 +48,12 @@ export function PRList({ prs, cursor, error }: PRListProps) {
       </Box>
 
       {prs.map((pr, i) => (
-        <PRRow key={pr.number} pr={pr} isSelected={i === cursor} />
+        <PRRow
+          key={pr.number}
+          pr={pr}
+          isSelected={i === cursor}
+          showAuthor={searchMode}
+        />
       ))}
     </Box>
   );

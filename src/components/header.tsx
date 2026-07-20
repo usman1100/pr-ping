@@ -6,6 +6,7 @@ interface HeaderProps {
   prCount: number;
   readyCount: number;
   pollInterval: number;
+  searchTerm?: string;
 }
 
 export function Header({
@@ -13,6 +14,7 @@ export function Header({
   prCount,
   readyCount,
   pollInterval,
+  searchTerm,
 }: HeaderProps) {
   return (
     <Box justifyContent="space-between" paddingX={1} paddingTop={1}>
@@ -23,6 +25,15 @@ export function Header({
         </Text>
       </Text>
       <Text>
+        {searchTerm ? (
+          <Text>
+            searching{" "}
+            <Text bold italic>
+              "{searchTerm}"
+            </Text>{" "}
+            ·{" "}
+          </Text>
+        ) : null}
         {prCount} PR{prCount !== 1 ? "s" : ""} ·{" "}
         <Text color={readyCount > 0 ? "green" : undefined}>
           {readyCount} ready
