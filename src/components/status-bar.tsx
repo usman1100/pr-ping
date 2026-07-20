@@ -10,7 +10,10 @@ interface StatusBarProps {
   pollInterval: number;
   lastUpdated: Date | null;
   error: string | null;
+  loading: boolean;
 }
+
+const SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 function timeSince(date: Date | null): string {
   if (!date) return "";
@@ -30,10 +33,12 @@ export function StatusBar({
   pollInterval,
   lastUpdated,
   error,
+  loading,
 }: StatusBarProps) {
-  const { frame } = useAnimation({ interval: 1000 });
-  const dot = "●";
-  const dotColor = error ? "red" : "green";
+  const { frame } = useAnimation({ interval: 80 });
+  const spinner = SPINNER[frame % SPINNER.length];
+  const indicator = loading ? spinner : "●";
+  const dotColor = error ? "red" : loading ? "yellow" : "green";
 
   const viewLabel =
     viewMode.type === "all"
@@ -47,7 +52,7 @@ export function StatusBar({
   return (
     <Box justifyContent="space-between" paddingX={1} height={1}>
       <Box gap={1}>
-        <Text color={dotColor}>{dot}</Text>
+        <Text color={dotColor}>{indicator}</Text>
         <Text dimColor>polling {pollInterval / 1000}s</Text>
         <Text dimColor>|</Text>
         <Text color="cyan">{viewLabel}</Text>
@@ -68,6 +73,9 @@ export function StatusBar({
       </Box>
 
       <Box gap={1}>
+        {loading && !error && (
+          <Text dimColor>refreshing…</Text>
+        )}
         {error ? (
           <Text color="yellow">⚠ {error}</Text>
         ) : (

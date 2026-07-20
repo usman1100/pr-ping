@@ -17,6 +17,7 @@ export function usePRs(
   const [error, setError] = useState<string | null>(null);
   const [readyCount, setReadyCount] = useState(0);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [loading, setLoading] = useState(true);
   const trackerRef = useRef(new StateTracker());
   const fetchRef = useRef<() => Promise<void>>(undefined);
   const fetchIdRef = useRef(0);
@@ -27,6 +28,7 @@ export function usePRs(
 
   const fetch = useCallback(async () => {
     const id = ++fetchIdRef.current;
+    setLoading(true);
     try {
       let search: string | undefined;
       let author: string | undefined;
@@ -66,6 +68,10 @@ export function usePRs(
       } else {
         setError(err instanceof Error ? err.message : String(err));
       }
+    } finally {
+      if (id === fetchIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [repoPath, subs, viewType, searchQuery]);
 
@@ -77,5 +83,5 @@ export function usePRs(
     return () => clearInterval(id);
   }, [fetch, pollInterval]);
 
-  return { prs, error, readyCount, lastUpdated, refresh: fetch };
+  return { prs, error, readyCount, lastUpdated, loading, refresh: fetch };
 }

@@ -10,6 +10,7 @@ interface PRListProps {
   error: string | null;
   subs: SubscriptionManager;
   subVersion: number;
+  loading: boolean;
 }
 
 const HEADER_LABELS = ["", "#", "Title", "Merge", "Appr", "CI", "Updated", "Author"];
@@ -20,6 +21,7 @@ export function PRList({
   error,
   subs,
   subVersion,
+  loading,
 }: PRListProps) {
   if (error) {
     return (
@@ -30,6 +32,13 @@ export function PRList({
   }
 
   if (prs.length === 0) {
+    if (loading) {
+      return (
+        <Box paddingY={1} paddingX={1}>
+          <Text dimColor>Fetching PRs…</Text>
+        </Box>
+      );
+    }
     return (
       <Box paddingY={1} paddingX={1}>
         <Text dimColor>No open PRs found.</Text>

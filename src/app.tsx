@@ -31,7 +31,7 @@ export default function App({ repoPath }: AppProps) {
   const { columns, rows } = useWindowSize();
 
   const [viewMode, setViewMode] = useState<ViewMode>({ type: "all" });
-  const { prs, error, readyCount, lastUpdated, refresh } = usePRs(
+  const { prs, error, readyCount, lastUpdated, loading, refresh } = usePRs(
     POLL_INTERVAL,
     repoPath,
     subs,
@@ -220,6 +220,7 @@ export default function App({ repoPath }: AppProps) {
                 error={error}
                 subs={subs}
                 subVersion={subVersion}
+                loading={loading}
               />
             </Box>
             <Box height={detailHeight} overflowY="hidden">
@@ -234,6 +235,7 @@ export default function App({ repoPath }: AppProps) {
               error={error}
               subs={subs}
               subVersion={subVersion}
+              loading={loading}
             />
           </Box>
         )}
@@ -247,6 +249,7 @@ export default function App({ repoPath }: AppProps) {
         pollInterval={POLL_INTERVAL}
         lastUpdated={lastUpdated}
         error={error}
+        loading={loading}
       />
 
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
