@@ -1,9 +1,12 @@
 import React from "react";
 import { Box, Text } from "ink";
 import type { PullRequest, StatusCheck } from "../types";
+import type { SubscriptionManager } from "../lib/subscriptions";
 
 interface DetailPanelProps {
   pr: PullRequest;
+  subs: SubscriptionManager;
+  subVersion: number;
 }
 
 function checkLabel(check: StatusCheck): string {
@@ -81,9 +84,14 @@ function mergeableLabel(mergeable: string): { label: string; color: string } {
   }
 }
 
-export function DetailPanel({ pr }: DetailPanelProps) {
+export function DetailPanel({
+  pr,
+  subs,
+  subVersion,
+}: DetailPanelProps) {
   const checks = pr.statusCheckRollup ?? [];
   const mergeStatus = mergeableLabel(pr.mergeable);
+  const isSubscribed = subs.has(pr.number);
 
   return (
     <Box
@@ -94,9 +102,14 @@ export function DetailPanel({ pr }: DetailPanelProps) {
       paddingY={1}
       marginTop={1}
     >
-      <Text bold>
-        PR #{pr.number} — {pr.title}
-      </Text>
+      <Box justifyContent="space-between">
+        <Text bold>
+          PR #{pr.number} — {pr.title}
+        </Text>
+        <Text color="cyan" bold>
+          {isSubscribed ? "◆ subscribed" : "  "}
+        </Text>
+      </Box>
 
       <Box marginTop={1} gap={4}>
         <Box>
@@ -142,6 +155,12 @@ export function DetailPanel({ pr }: DetailPanelProps) {
           <Text dimColor>No CI checks yet.</Text>
         </Box>
       )}
+
+      <Box marginTop={1}>
+        <Text dimColor>
+          Press {"s"} to {isSubscribed ? "unsubscribe" : "subscribe"}
+        </Text>
+      </Box>
     </Box>
   );
 }

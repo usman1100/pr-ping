@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchPRs, RateLimitError } from "../lib/github";
 import { StateTracker, computeReady } from "../lib/state";
 import { createNotifier } from "../notifier";
+import type { SubscriptionManager } from "../lib/subscriptions";
 import type { PullRequest } from "../types";
 
 const notifier = createNotifier();
@@ -9,6 +10,7 @@ const notifier = createNotifier();
 export function usePRs(
   pollInterval: number,
   repoPath: string,
+  subs: SubscriptionManager,
   searchTerm?: string,
 ) {
   const [prs, setPRs] = useState<PullRequest[]>([]);
@@ -26,7 +28,9 @@ export function usePRs(
       setError(null);
 
       for (const pr of newlyReady) {
-        notifier.notify("PR Ready!", `#${pr.number}: ${pr.title}`, pr.url);
+        if (subs.has(pr.number)) {
+          notifier.notify("PR Ready!", `#${pr.number}: ${pr.title}`, pr.url);
+        }
       }
     } catch (err) {
       if (err instanceof RateLimitError) {
@@ -35,7 +39,7 @@ export function usePRs(
         setError(err instanceof Error ? err.message : String(err));
       }
     }
-  }, [repoPath, searchTerm]);
+  }, [repoPath, searchTerm, subs]);
 
   fetchRef.current = fetch;
 

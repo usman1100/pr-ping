@@ -14,7 +14,7 @@ export function Footer({ searchMode }: FooterProps) {
         </Text>
       ) : (
         <Text dimColor>
-          ↑↓ nav · Enter detail · / search · r refresh · q quit
+          ↑↓ nav · Enter detail · s subscribe · / search · r refresh · q quit
         </Text>
       )}
     </Box>
