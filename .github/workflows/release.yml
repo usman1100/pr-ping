@@ -2,13 +2,63 @@ name: release
 
 on:
   push:
-    tags: "v*"
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next version from conventional commits
+        id: version
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          CURRENT_VERSION="${LATEST_TAG#v}"
+
+          COMMITS=$(git log "$LATEST_TAG..HEAD" --oneline --no-merges 2>/dev/null || true)
+
+          if [ -z "$COMMITS" ]; then
+            echo "No new commits since $LATEST_TAG — nothing to release"
+            exit 0
+          fi
+
+          BREAKING=$(echo "$COMMITS" | grep -cE "BREAKING CHANGE|!:" || true)
+          FEATS=$(echo "$COMMITS" | grep -cE "\s(feat|feature)(\(|:)" || true)
+          FIXES=$(echo "$COMMITS" | grep -cE "\sfix(\(|:)" || true)
+
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          if [ "$BREAKING" -gt 0 ]; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          elif [ "$FEATS" -gt 0 ]; then
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          elif [ "$FIXES" -gt 0 ]; then
+            PATCH=$((PATCH + 1))
+          else
+            echo "No feat/fix/breaking commits since $LATEST_TAG — skipping release"
+            echo "$COMMITS"
+            exit 0
+          fi
+
+          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NEW_VERSION" >> "$GITHUB_OUTPUT"
+
   release:
+    needs: check
+    if: needs.check.outputs.new_version != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,13 +79,20 @@ jobs:
         env:
           OUTPUT: CHANGELOG.md
 
+      - name: Create tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag "${{ needs.check.outputs.tag }}"
+          git push origin "${{ needs.check.outputs.tag }}"
+
       - name: Create release
         run: |
-          gh release create "${{ github.ref_name }}" \
+          gh release create "${{ needs.check.outputs.tag }}" \
             dist/pr-ping-v*.tar.gz \
             dist/SHA256SUMS.txt \
             scripts/install.sh \
-            --title "${{ github.ref_name }}" \
+            --title "${{ needs.check.outputs.tag }}" \
             --notes-file CHANGELOG.md
         env:
           GH_TOKEN: ${{ github.token }}
