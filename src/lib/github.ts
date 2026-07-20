@@ -1,3 +1,4 @@
+import { logger } from "./logger";
 import type { PullRequest, RepoConfig } from "../types";
 
 export class RateLimitError extends Error {
@@ -29,11 +30,14 @@ export function getRepoDisplayName(config: RepoConfig): string {
 }
 
 export function checkAuth(): void {
+  logger.info("checking gh auth status");
   const result = Bun.spawnSync(["gh", "auth", "status"]);
   if (result.exitCode !== 0) {
+    logger.fatal("gh not authenticated");
     console.error("Not authenticated with gh CLI. Run 'gh auth login' first.");
     process.exit(1);
   }
+  logger.info("gh auth ok");
 }
 
 export async function fetchPRs(
@@ -55,6 +59,7 @@ export async function fetchPRs(
     subcommand.push("--author", author);
   }
   const args = ghArgs(config, subcommand);
+  logger.debug({ args }, "fetching PRs");
   const proc = Bun.spawn(args, ghSpawnOpts(config));
   const [stdout, stderr] = await Promise.all([
     new Response(proc.stdout).text(),
@@ -67,15 +72,20 @@ export async function fetchPRs(
       stderr.toLowerCase().includes("rate limit") ||
       stderr.toLowerCase().includes("rate_limit")
     ) {
+      logger.warn({ stderr }, "rate limit hit");
       throw new RateLimitError(stderr);
     }
+    logger.error({ exitCode, stderr }, "gh pr list failed");
     throw new Error(`gh pr list failed: ${stderr}`);
   }
 
-  return JSON.parse(stdout) as PullRequest[];
+  const prs = JSON.parse(stdout) as PullRequest[];
+  logger.info({ count: prs.length, author, search }, "PRs fetched");
+  return prs;
 }
 
 export async function fetchMergedPRNumbers(config: RepoConfig): Promise<number[]> {
+  logger.debug("fetching merged PR numbers");
   const args = ghArgs(config, [
     "pr", "list", "--state", "merged", "--limit", "50",
     "--json", "number",
@@ -92,11 +102,15 @@ export async function fetchMergedPRNumbers(config: RepoConfig): Promise<number[]
       stderr.toLowerCase().includes("rate limit") ||
       stderr.toLowerCase().includes("rate_limit")
     ) {
+      logger.warn({ stderr }, "rate limit hit fetching merged PRs");
       throw new RateLimitError(stderr);
     }
+    logger.warn({ exitCode, stderr }, "fetching merged PRs failed");
     return [];
   }
 
   const items = JSON.parse(stdout) as { number: number }[];
-  return items.map((i) => i.number);
+  const numbers = items.map((i) => i.number);
+  logger.debug({ count: numbers.length }, "merged PRs fetched");
+  return numbers;
 }

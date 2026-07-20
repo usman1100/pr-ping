@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchPRs, fetchMergedPRNumbers, RateLimitError } from "../lib/github";
 import { StateTracker, computeReady } from "../lib/state";
 import { createNotifier } from "../notifier";
+import { logger } from "../lib/logger";
 import type { SubscriptionManager } from "../lib/subscriptions";
 import type { PullRequest, ViewMode, RepoConfig } from "../types";
 
@@ -28,6 +29,7 @@ export function usePRs(
 
   const fetch = useCallback(async () => {
     const id = ++fetchIdRef.current;
+    logger.debug({ viewType, searchQuery }, "poll cycle starting");
     setLoading(true);
     try {
       let search: string | undefined;
@@ -47,6 +49,10 @@ export function usePRs(
       }
 
       const newlyReady = trackerRef.current.update(filtered);
+      logger.info(
+        { total: filtered.length, newlyReady: newlyReady.length, viewType },
+        "poll cycle complete",
+      );
       setPRs(filtered);
       setReadyCount(filtered.filter((pr) => computeReady(pr)).length);
       setError(null);
@@ -54,6 +60,7 @@ export function usePRs(
 
       for (const pr of newlyReady) {
         if (subs.has(pr.number)) {
+          logger.info({ pr: pr.number, title: pr.title }, "notifying — PR ready");
           notifier.notify(
             "PR Ready!",
             `#${pr.number}: ${pr.title}`,
@@ -68,18 +75,21 @@ export function usePRs(
           const mergedNumbers = await fetchMergedPRNumbers(repoConfig);
           for (const num of mergedNumbers) {
             if (subs.has(num)) {
+              logger.info({ pr: num }, "auto-unsubscribing from merged PR");
               subs.remove(num);
             }
           }
         } catch {
-          // Silently ignore errors in merge check
+          logger.warn("merge check failed (silent)");
         }
       }
     } catch (err) {
       if (id !== fetchIdRef.current) return;
       if (err instanceof RateLimitError) {
+        logger.warn("rate limit in poll cycle");
         setError("Rate limit hit");
       } else {
+        logger.error({ err }, "poll cycle error");
         setError(err instanceof Error ? err.message : String(err));
       }
     } finally {
@@ -92,9 +102,13 @@ export function usePRs(
   fetchRef.current = fetch;
 
   useEffect(() => {
+    logger.info({ pollInterval }, "starting poll interval");
     fetch();
     const id = setInterval(() => { fetchRef.current?.(); }, pollInterval);
-    return () => clearInterval(id);
+    return () => {
+      logger.info("stopping poll interval");
+      clearInterval(id);
+    };
   }, [fetch, pollInterval]);
 
   return { prs, error, readyCount, lastUpdated, loading, refresh: fetch };

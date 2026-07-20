@@ -9,6 +9,7 @@ import { StatusBar } from "./components/status-bar";
 import { HelpOverlay } from "./components/help-overlay";
 import type { PullRequest, ViewMode, RepoConfig } from "./types";
 import { getRepoDisplayName } from "./lib/github";
+import { logger } from "./lib/logger";
 
 const POLL_INTERVAL = 30000;
 const subs = new SubscriptionManager();
@@ -119,6 +120,7 @@ export default function App({ repoConfig }: AppProps) {
       // Tabs
       const tabMode = getViewModeFromKey(input);
       if (tabMode) {
+        logger.info({ tab: tabMode.type }, "tab switch");
         setViewMode(tabMode);
         setCursor(0);
         setDetailPr(null);
@@ -126,6 +128,7 @@ export default function App({ repoConfig }: AppProps) {
 
       // Search
       if (input === "/") {
+        logger.info("search mode entered");
         prevViewModeRef.current = viewMode;
         setSearchMode(true);
         setSearchBuffer("");
@@ -133,7 +136,9 @@ export default function App({ repoConfig }: AppProps) {
 
       // Subscribe
       if (input === "s" && prs[cursor]) {
-        toggleSub(prs[cursor]!.number);
+        const pr = prs[cursor]!;
+        toggleSub(pr.number);
+        logger.info({ pr: pr.number, subscribed: subs.has(pr.number) }, "subscribe toggle");
         // If on subscribed tab, re-render will reflect the change
         if (viewMode.type === "subscribed") {
           refresh();
@@ -142,26 +147,31 @@ export default function App({ repoConfig }: AppProps) {
 
       // Open in browser
       if (input === "o" && prs[cursor]) {
+        logger.info({ pr: prs[cursor]!.number, url: prs[cursor]!.url }, "opening in browser");
         openURL(prs[cursor]!.url);
       }
 
       // Copy URL
       if (input === "y" && prs[cursor]) {
+        logger.info({ pr: prs[cursor]!.number }, "copying URL");
         copyURL(prs[cursor]!.url);
       }
 
       // Refresh
       if (input === "r") {
+        logger.info("manual refresh triggered");
         refresh();
       }
 
       // Help
       if (input === "?") {
+        logger.info("help overlay toggled");
         setShowHelp(true);
       }
 
       // Quit
       if (input === "q") {
+        logger.info("user quit");
         exit();
       }
     },
