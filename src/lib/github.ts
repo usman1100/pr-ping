@@ -53,3 +53,28 @@ export async function fetchPRs(
 
   return JSON.parse(stdout) as PullRequest[];
 }
+
+export async function fetchMergedPRNumbers(cwd: string): Promise<number[]> {
+  const proc = Bun.spawn([
+    "gh", "pr", "list", "--state", "merged", "--limit", "50",
+    "--json", "number",
+  ], { cwd });
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  const exitCode = await proc.exited;
+
+  if (exitCode !== 0) {
+    if (
+      stderr.toLowerCase().includes("rate limit") ||
+      stderr.toLowerCase().includes("rate_limit")
+    ) {
+      throw new RateLimitError(stderr);
+    }
+    return [];
+  }
+
+  const items = JSON.parse(stdout) as { number: number }[];
+  return items.map((i) => i.number);
+}

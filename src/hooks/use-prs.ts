@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { fetchPRs, RateLimitError } from "../lib/github";
+import { fetchPRs, fetchMergedPRNumbers, RateLimitError } from "../lib/github";
 import { StateTracker, computeReady } from "../lib/state";
 import { createNotifier } from "../notifier";
 import type { SubscriptionManager } from "../lib/subscriptions";
@@ -59,6 +59,20 @@ export function usePRs(
             `#${pr.number}: ${pr.title}`,
             pr.url,
           );
+        }
+      }
+
+      // Remove subscriptions for merged PRs
+      if (subs.count > 0) {
+        try {
+          const mergedNumbers = await fetchMergedPRNumbers(repoPath);
+          for (const num of mergedNumbers) {
+            if (subs.has(num)) {
+              subs.remove(num);
+            }
+          }
+        } catch {
+          // Silently ignore errors in merge check
         }
       }
     } catch (err) {

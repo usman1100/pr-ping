@@ -33,6 +33,11 @@ export class SubscriptionManager {
     return this.subs.has(num);
   }
 
+  remove(num: number): void {
+    this.subs.delete(num);
+    this.save();
+  }
+
   toggle(num: number): boolean {
     if (this.subs.has(num)) {
       this.subs.delete(num);
