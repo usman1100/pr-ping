@@ -1,3 +1,4 @@
+import { logger } from "./logger";
 import type { PullRequest, StatusCheck } from "../types";
 
 function getConclusion(check: StatusCheck): string | null {
@@ -42,17 +43,26 @@ export class StateTracker {
       const nowReady = computeReady(pr);
       const wasReady = this.cache.get(num) ?? false;
       if (nowReady && !wasReady) {
+        logger.info({ pr: num, title: pr.title }, "PR became ready");
         newlyReady.push(pr);
+      }
+      if (wasReady && !nowReady) {
+        logger.debug({ pr: num }, "PR no longer ready");
       }
       this.cache.set(num, nowReady);
     }
 
     for (const num of this.cache.keys()) {
       if (!current.has(num)) {
+        logger.debug({ pr: num }, "PR removed from state tracker");
         this.cache.delete(num);
       }
     }
 
+    logger.debug(
+      { tracked: this.cache.size, newlyReady: newlyReady.length },
+      "state tracker update",
+    );
     return newlyReady;
   }
 

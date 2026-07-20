@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { logger } from "./logger";
 
 const CONFIG_DIR = `${process.env.HOME}/.config/pr-ping`;
 const FILE = `${CONFIG_DIR}/subscriptions.json`;
@@ -16,8 +17,10 @@ export class SubscriptionManager {
       if (existsSync(FILE)) {
         const data = JSON.parse(readFileSync(FILE, "utf-8")) as number[];
         this.subs = new Set(data);
+        logger.info({ count: this.subs.size }, "subscriptions loaded");
       }
     } catch {
+      logger.warn("failed to load subscriptions, starting fresh");
       this.subs = new Set();
     }
   }
@@ -26,7 +29,10 @@ export class SubscriptionManager {
     try {
       mkdirSync(CONFIG_DIR, { recursive: true });
       writeFileSync(FILE, JSON.stringify([...this.subs]));
-    } catch {}
+      logger.debug({ count: this.subs.size }, "subscriptions saved");
+    } catch (err) {
+      logger.error({ err }, "failed to save subscriptions");
+    }
   }
 
   has(num: number): boolean {
@@ -34,6 +40,7 @@ export class SubscriptionManager {
   }
 
   remove(num: number): void {
+    logger.info({ pr: num }, "subscription removed");
     this.subs.delete(num);
     this.save();
   }
@@ -42,10 +49,12 @@ export class SubscriptionManager {
     if (this.subs.has(num)) {
       this.subs.delete(num);
       this.save();
+      logger.info({ pr: num }, "unsubscribed");
       return false;
     }
     this.subs.add(num);
     this.save();
+    logger.info({ pr: num }, "subscribed");
     return true;
   }
 
