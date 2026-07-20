@@ -29,13 +29,15 @@ Download the archive for your platform from the [latest release](https://github.
 ```sh
 bun install
 bun run build
-./pr-ping /path/to/repo
+./pr-ping /path/to/repo                          # local repo
+./pr-ping https://github.com/owner/repo          # remote repo (no clone needed)
 ```
 
 ## Usage
 
 ```sh
-pr-ping /path/to/github/repo
+pr-ping /path/to/github/repo                   # local clone
+pr-ping https://github.com/owner/repo          # remote repo (no clone needed)
 ```
 
 The tool runs a full-screen terminal UI. It requires [GitHub CLI (`gh`)](https://cli.github.com/) to be installed and authenticated.
@@ -65,7 +67,7 @@ When subscribed to a PR, pr-ping checks for changes every 60 seconds and sends a
 
 - [GitHub CLI (`gh`)](https://cli.github.com/) — authenticated (`gh auth login`)
 - macOS 13+ (for terminal-notifier notifications)
-- A local clone of the repository you want to monitor
+- A local clone of the repository you want to monitor (or use the full GitHub URL for remote)
 
 ## How it works
 

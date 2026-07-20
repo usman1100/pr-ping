@@ -1,10 +1,31 @@
-import type { PullRequest } from "../types";
+import type { PullRequest, RepoConfig } from "../types";
 
 export class RateLimitError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "RateLimitError";
   }
+}
+
+function ghArgs(config: RepoConfig, subcommand: string[]): string[] {
+  if (config.type === "local") {
+    return ["gh", ...subcommand];
+  }
+  return ["gh", "--repo", config.repo, ...subcommand];
+}
+
+function ghSpawnOpts(config: RepoConfig): Record<string, unknown> {
+  if (config.type === "local") {
+    return { cwd: config.path };
+  }
+  return {};
+}
+
+export function getRepoDisplayName(config: RepoConfig): string {
+  if (config.type === "local") {
+    return config.path.split("/").filter(Boolean).pop() ?? config.path;
+  }
+  return config.repo.split("/").pop() ?? config.repo;
 }
 
 export function checkAuth(): void {
@@ -16,12 +37,11 @@ export function checkAuth(): void {
 }
 
 export async function fetchPRs(
-  cwd: string,
+  config: RepoConfig,
   search?: string,
   author?: string,
 ): Promise<PullRequest[]> {
-  const args = [
-    "gh",
+  const subcommand = [
     "pr",
     "list",
     "--limit",
@@ -30,11 +50,12 @@ export async function fetchPRs(
     "number,title,body,state,createdAt,updatedAt,author,mergeable,isDraft,labels,reviews,reviewRequests,statusCheckRollup,url",
   ];
   if (search) {
-    args.push("--search", search);
+    subcommand.push("--search", search);
   } else if (author) {
-    args.push("--author", author);
+    subcommand.push("--author", author);
   }
-  const proc = Bun.spawn(args, { cwd });
+  const args = ghArgs(config, subcommand);
+  const proc = Bun.spawn(args, ghSpawnOpts(config));
   const [stdout, stderr] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
@@ -54,11 +75,12 @@ export async function fetchPRs(
   return JSON.parse(stdout) as PullRequest[];
 }
 
-export async function fetchMergedPRNumbers(cwd: string): Promise<number[]> {
-  const proc = Bun.spawn([
-    "gh", "pr", "list", "--state", "merged", "--limit", "50",
+export async function fetchMergedPRNumbers(config: RepoConfig): Promise<number[]> {
+  const args = ghArgs(config, [
+    "pr", "list", "--state", "merged", "--limit", "50",
     "--json", "number",
-  ], { cwd });
+  ]);
+  const proc = Bun.spawn(args, ghSpawnOpts(config));
   const [stdout, stderr] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),

@@ -7,13 +7,14 @@ import { PRList } from "./components/pr-list";
 import { DetailPanel } from "./components/detail-panel";
 import { StatusBar } from "./components/status-bar";
 import { HelpOverlay } from "./components/help-overlay";
-import type { PullRequest, ViewMode } from "./types";
+import type { PullRequest, ViewMode, RepoConfig } from "./types";
+import { getRepoDisplayName } from "./lib/github";
 
 const POLL_INTERVAL = 30000;
 const subs = new SubscriptionManager();
 
 interface AppProps {
-  repoPath: string;
+  repoConfig: RepoConfig;
 }
 
 function openURL(url: string) {
@@ -26,14 +27,14 @@ function copyURL(url: string) {
   Bun.spawnSync(["pbcopy"], { input: url } as any);
 }
 
-export default function App({ repoPath }: AppProps) {
+export default function App({ repoConfig }: AppProps) {
   const { exit } = useApp();
   const { columns, rows } = useWindowSize();
 
   const [viewMode, setViewMode] = useState<ViewMode>({ type: "all" });
   const { prs, error, readyCount, lastUpdated, loading, refresh } = usePRs(
     POLL_INTERVAL,
-    repoPath,
+    repoConfig,
     subs,
     viewMode,
   );
@@ -198,7 +199,7 @@ export default function App({ repoPath }: AppProps) {
     <Box width={columns} height={rows} flexDirection="column">
       <TabBar
         activeTab={viewMode}
-        repoPath={repoPath}
+        repoConfig={repoConfig}
         counts={tabCounts}
         searchMode={searchMode}
         searchBuffer={searchBuffer}

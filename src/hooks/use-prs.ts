@@ -3,13 +3,13 @@ import { fetchPRs, fetchMergedPRNumbers, RateLimitError } from "../lib/github";
 import { StateTracker, computeReady } from "../lib/state";
 import { createNotifier } from "../notifier";
 import type { SubscriptionManager } from "../lib/subscriptions";
-import type { PullRequest, ViewMode } from "../types";
+import type { PullRequest, ViewMode, RepoConfig } from "../types";
 
 const notifier = createNotifier();
 
 export function usePRs(
   pollInterval: number,
-  repoPath: string,
+  repoConfig: RepoConfig,
   subs: SubscriptionManager,
   viewMode: ViewMode,
 ) {
@@ -37,7 +37,7 @@ export function usePRs(
       } else if (viewType === "mine") {
         author = "@me";
       }
-      const data = await fetchPRs(repoPath, search, author);
+      const data = await fetchPRs(repoConfig, search, author);
 
       if (id !== fetchIdRef.current) return;
 
@@ -65,7 +65,7 @@ export function usePRs(
       // Remove subscriptions for merged PRs
       if (subs.count > 0) {
         try {
-          const mergedNumbers = await fetchMergedPRNumbers(repoPath);
+          const mergedNumbers = await fetchMergedPRNumbers(repoConfig);
           for (const num of mergedNumbers) {
             if (subs.has(num)) {
               subs.remove(num);
@@ -87,7 +87,7 @@ export function usePRs(
         setLoading(false);
       }
     }
-  }, [repoPath, subs, viewType, searchQuery]);
+  }, [repoConfig, subs, viewType, searchQuery]);
 
   fetchRef.current = fetch;
 

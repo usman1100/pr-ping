@@ -28,6 +28,10 @@ export interface ReviewRequest {
   };
 }
 
+export type RepoConfig =
+  | { type: "local"; path: string }
+  | { type: "remote"; repo: string };
+
 export interface PullRequest {
   number: number;
   title: string;

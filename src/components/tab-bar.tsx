@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { ViewMode } from "../types";
+import type { ViewMode, RepoConfig } from "../types";
+import { getRepoDisplayName } from "../lib/github";
 
 interface Tab {
   key: string;
@@ -10,7 +11,7 @@ interface Tab {
 
 interface TabBarProps {
   activeTab: ViewMode;
-  repoPath: string;
+  repoConfig: RepoConfig;
   counts: Record<string, number>;
   searchMode: boolean;
   searchBuffer: string;
@@ -30,7 +31,7 @@ function tabLabel(tab: Tab, count: number): string {
 
 export function TabBar({
   activeTab,
-  repoPath,
+  repoConfig,
   counts,
   searchMode,
   searchBuffer,
@@ -56,7 +57,7 @@ export function TabBar({
           </Text>
         )}
       </Box>
-      <Text dimColor>{repoPath.split("/").pop()}</Text>
+      <Text dimColor>{getRepoDisplayName(repoConfig)}</Text>
     </Box>
   );
 }
