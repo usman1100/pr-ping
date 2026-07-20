@@ -1,26 +1,21 @@
-export interface StatusCheck {
-  conclusion: string | null;
-  status: string | null;
-}
+import type { PullRequest, StatusCheck } from "../types";
 
-export interface PullRequest {
-  number: number;
-  title: string;
-  mergeable: string;
-  statusCheckRollup: StatusCheck[] | null;
-  url: string;
+function getConclusion(check: StatusCheck): string | null {
+  return check.conclusion ?? check.state ?? null;
 }
 
 export function computeReady(pr: PullRequest): boolean {
   if (!pr.statusCheckRollup || pr.statusCheckRollup.length === 0) return false;
   if (pr.mergeable !== "MERGEABLE") return false;
-  return pr.statusCheckRollup.every(
-    (check) =>
+  return pr.statusCheckRollup.every((check) => {
+    const conclusion = getConclusion(check);
+    return (
       check.status === "COMPLETED" &&
-      (check.conclusion === "SUCCESS" ||
-        check.conclusion === "NEUTRAL" ||
-        check.conclusion === "SKIPPED"),
-  );
+      (conclusion === "SUCCESS" ||
+        conclusion === "NEUTRAL" ||
+        conclusion === "SKIPPED")
+    );
+  });
 }
 
 export class StateTracker {

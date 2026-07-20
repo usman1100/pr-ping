@@ -1,4 +1,4 @@
-import type { PullRequest } from "./state";
+import type { PullRequest } from "../types";
 
 export class RateLimitError extends Error {
   constructor(message: string) {
@@ -23,7 +23,7 @@ export function fetchMyPRs(): PullRequest[] {
     "--author",
     "@me",
     "--json",
-    "number,title,mergeable,statusCheckRollup,url",
+    "number,title,mergeable,isDraft,statusCheckRollup,url",
   ]);
 
   if (result.exitCode !== 0) {

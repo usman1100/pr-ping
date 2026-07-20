@@ -1,6 +1,6 @@
 {
   "name": "gh-pr-monitor",
-  "module": "src/index.ts",
+  "module": "src/index.tsx",
   "type": "module",
   "private": true,
   "devDependencies": {
@@ -8,5 +8,10 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "ink": "^7.1.1",
+    "react": "^19.2.7",
+    "react-devtools-core": "^7.0.1"
   }
 }
