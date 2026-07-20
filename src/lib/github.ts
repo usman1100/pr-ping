@@ -20,13 +20,13 @@ export function fetchPRs(cwd: string, search?: string): PullRequest[] {
     "gh",
     "pr",
     "list",
+    "--limit",
+    "100",
     "--json",
     "number,title,author,mergeable,isDraft,reviews,statusCheckRollup,url",
   ];
   if (search) {
     args.push("--search", search);
-  } else {
-    args.push("--author", "@me");
   }
   const result = Bun.spawnSync(args, { cwd });
 
