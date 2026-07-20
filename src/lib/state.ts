@@ -4,6 +4,13 @@ function getConclusion(check: StatusCheck): string | null {
   return check.conclusion ?? check.state ?? null;
 }
 
+function isCheckCompleted(check: StatusCheck): boolean {
+  if (check.status === "COMPLETED") return true;
+  if (check.conclusion != null) return true;
+  if (check.state != null) return true;
+  return false;
+}
+
 export function hasApproval(pr: PullRequest): boolean {
   if (!pr.reviews || pr.reviews.length === 0) return false;
   return pr.reviews.some((r) => r.state === "APPROVED");
@@ -16,7 +23,7 @@ export function computeReady(pr: PullRequest): boolean {
   return pr.statusCheckRollup.every((check) => {
     const conclusion = getConclusion(check);
     return (
-      check.status === "COMPLETED" &&
+      isCheckCompleted(check) &&
       (conclusion === "SUCCESS" ||
         conclusion === "NEUTRAL" ||
         conclusion === "SKIPPED")

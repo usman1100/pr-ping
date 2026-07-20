@@ -34,8 +34,15 @@ function approvalBadge(reviews: Review[] | null): {
   return { label: "○", color: "yellow" };
 }
 
+function isCheckCompleted(check: StatusCheck): boolean {
+  if (check.status === "COMPLETED") return true;
+  if (check.conclusion != null) return true;
+  if (check.state != null) return true;
+  return false;
+}
+
 function checkColor(check: StatusCheck): string {
-  if (check.status !== "COMPLETED") return "yellow";
+  if (!isCheckCompleted(check)) return "yellow";
   const conclusion = check.conclusion ?? check.state ?? null;
   switch (conclusion) {
     case "SUCCESS":
@@ -54,7 +61,7 @@ function checkColor(check: StatusCheck): string {
 }
 
 function checkSymbol(check: StatusCheck): string {
-  if (check.status !== "COMPLETED") return "○";
+  if (!isCheckCompleted(check)) return "○";
   const conclusion = check.conclusion ?? check.state ?? null;
   switch (conclusion) {
     case "SUCCESS":
