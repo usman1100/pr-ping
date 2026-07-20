@@ -15,16 +15,19 @@ export function checkAuth(): void {
   }
 }
 
-export function fetchMyPRs(): PullRequest[] {
-  const result = Bun.spawnSync([
-    "gh",
-    "pr",
-    "list",
-    "--author",
-    "@me",
-    "--json",
-    "number,title,mergeable,isDraft,statusCheckRollup,url",
-  ]);
+export function fetchMyPRs(cwd: string): PullRequest[] {
+  const result = Bun.spawnSync(
+    [
+      "gh",
+      "pr",
+      "list",
+      "--author",
+      "@me",
+      "--json",
+      "number,title,mergeable,isDraft,statusCheckRollup,url",
+    ],
+    { cwd },
+  );
 
   if (result.exitCode !== 0) {
     const stderr = result.stderr.toString();

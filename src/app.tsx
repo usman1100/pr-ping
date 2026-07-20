@@ -9,9 +9,13 @@ import type { PullRequest } from "./types";
 
 const POLL_INTERVAL = 5000;
 
-export default function App() {
+interface AppProps {
+  repoPath: string;
+}
+
+export default function App({ repoPath }: AppProps) {
   const { exit } = useApp();
-  const { prs, error, readyCount, refresh } = usePRs(POLL_INTERVAL);
+  const { prs, error, readyCount, refresh } = usePRs(POLL_INTERVAL, repoPath);
   const [cursor, setCursor] = useState(0);
   const [detailPr, setDetailPr] = useState<PullRequest | null>(null);
 
@@ -47,6 +51,7 @@ export default function App() {
   return (
     <Box flexDirection="column" width="100%">
       <Header
+        repoPath={repoPath}
         prCount={prs.length}
         readyCount={readyCount}
         pollInterval={POLL_INTERVAL}

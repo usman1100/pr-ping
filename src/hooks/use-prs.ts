@@ -6,7 +6,7 @@ import type { PullRequest } from "../types";
 
 const notifier = createNotifier();
 
-export function usePRs(pollInterval: number) {
+export function usePRs(pollInterval: number, repoPath: string) {
   const [prs, setPRs] = useState<PullRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [readyCount, setReadyCount] = useState(0);
@@ -15,7 +15,7 @@ export function usePRs(pollInterval: number) {
 
   const fetch = useCallback(() => {
     try {
-      const data = fetchMyPRs();
+      const data = fetchMyPRs(repoPath);
       const newlyReady = trackerRef.current.update(data);
       setPRs(data);
       setReadyCount(data.filter((pr) => computeReady(pr)).length);
@@ -39,7 +39,7 @@ export function usePRs(pollInterval: number) {
     fetch();
     const id = setInterval(() => fetchRef.current?.(), pollInterval);
     return () => clearInterval(id);
-  }, [pollInterval]);
+  }, [pollInterval, repoPath]);
 
   return { prs, error, readyCount, refresh: fetch };
 }
