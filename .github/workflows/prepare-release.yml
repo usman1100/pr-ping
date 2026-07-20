@@ -28,9 +28,9 @@ jobs:
             exit 0
           fi
 
-          BREAKING=$(echo "$COMMITS" | grep -cE "(!|BREAKING CHANGE)" || true)
-          FEATS=$(echo "$COMMITS" | grep -cE "^(feat|feature)" || true)
-          FIXES=$(echo "$COMMITS" | grep -cE "^fix" || true)
+          BREAKING=$(echo "$COMMITS" | grep -cE "BREAKING CHANGE|!:" || true)
+          FEATS=$(echo "$COMMITS" | grep -cE "\s(feat|feature)(\(|:)" || true)
+          FIXES=$(echo "$COMMITS" | grep -cE "\sfix(\(|:)" || true)
 
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
