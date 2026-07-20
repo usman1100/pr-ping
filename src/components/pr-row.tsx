@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { PullRequest, StatusCheck } from "../types";
+import type { PullRequest, StatusCheck, Review } from "../types";
 
 interface PRRowProps {
   pr: PullRequest;
@@ -20,6 +20,18 @@ function mergeableBadge(mergeable: string): { label: string; color: string } {
     default:
       return { label: "?", color: "yellow" };
   }
+}
+
+function approvalBadge(reviews: Review[] | null): {
+  label: string;
+  color: string;
+} {
+  if (!reviews || reviews.length === 0) return { label: "○", color: "yellow" };
+  const approved = reviews.some((r) => r.state === "APPROVED");
+  const changesRequested = reviews.some((r) => r.state === "CHANGES_REQUESTED");
+  if (approved) return { label: "●", color: "green" };
+  if (changesRequested) return { label: "●", color: "red" };
+  return { label: "○", color: "yellow" };
 }
 
 function checkColor(check: StatusCheck): string {
@@ -67,6 +79,7 @@ export function PRRow({
   isSubscribed,
 }: PRRowProps) {
   const mergeStatus = mergeableBadge(pr.mergeable);
+  const approval = approvalBadge(pr.reviews ?? null);
   const checks = pr.statusCheckRollup ?? [];
   const cursorChar = isSelected ? "▸" : " ";
   const subChar = isSubscribed ? "◆" : " ";
@@ -98,8 +111,12 @@ export function PRRow({
         </Text>
       </Box>
 
-      <Box width={4} marginRight={1} justifyContent="center">
+      <Box width={3} marginRight={1} justifyContent="center">
         <Text color={mergeStatus.color}>{mergeStatus.label}</Text>
+      </Box>
+
+      <Box width={3} marginRight={1} justifyContent="center">
+        <Text color={approval.color}>{approval.label}</Text>
       </Box>
 
       <Box width={checks.length * 2 + 2}>

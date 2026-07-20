@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { PullRequest, StatusCheck } from "../types";
+import type { PullRequest, StatusCheck, Review } from "../types";
 import type { SubscriptionManager } from "../lib/subscriptions";
 
 interface DetailPanelProps {
@@ -84,6 +84,18 @@ function mergeableLabel(mergeable: string): { label: string; color: string } {
   }
 }
 
+function approvalLabel(
+  reviews: Review[] | null,
+): { label: string; color: string } {
+  if (!reviews || reviews.length === 0)
+    return { label: "No reviews", color: "yellow" };
+  const approved = reviews.some((r) => r.state === "APPROVED");
+  const changesRequested = reviews.some((r) => r.state === "CHANGES_REQUESTED");
+  if (approved) return { label: "Approved", color: "green" };
+  if (changesRequested) return { label: "Changes requested", color: "red" };
+  return { label: "Pending review", color: "yellow" };
+}
+
 export function DetailPanel({
   pr,
   subs,
@@ -91,6 +103,7 @@ export function DetailPanel({
 }: DetailPanelProps) {
   const checks = pr.statusCheckRollup ?? [];
   const mergeStatus = mergeableLabel(pr.mergeable);
+  const approval = approvalLabel(pr.reviews ?? null);
   const isSubscribed = subs.has(pr.number);
 
   return (
@@ -117,11 +130,16 @@ export function DetailPanel({
           <Text color={mergeStatus.color}>{mergeStatus.label}</Text>
         </Box>
         <Box>
-          <Text dimColor>URL: </Text>
-          <Text underline wrap="truncate-end">
-            {pr.url}
-          </Text>
+          <Text dimColor>Review: </Text>
+          <Text color={approval.color}>{approval.label}</Text>
         </Box>
+      </Box>
+
+      <Box marginTop={1}>
+        <Text dimColor>URL: </Text>
+        <Text underline wrap="truncate-end">
+          {pr.url}
+        </Text>
       </Box>
 
       {checks.length > 0 && (

@@ -49,8 +49,11 @@ export function PRList({
         <Box flexGrow={1}>
           <Text dimColor>Title</Text>
         </Box>
-        <Box width={5}>
+        <Box width={4}>
           <Text dimColor>Merge</Text>
+        </Box>
+        <Box width={4}>
+          <Text dimColor>Appr</Text>
         </Box>
         <Box>
           <Text dimColor>CI</Text>

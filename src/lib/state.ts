@@ -4,9 +4,15 @@ function getConclusion(check: StatusCheck): string | null {
   return check.conclusion ?? check.state ?? null;
 }
 
+export function hasApproval(pr: PullRequest): boolean {
+  if (!pr.reviews || pr.reviews.length === 0) return false;
+  return pr.reviews.some((r) => r.state === "APPROVED");
+}
+
 export function computeReady(pr: PullRequest): boolean {
   if (!pr.statusCheckRollup || pr.statusCheckRollup.length === 0) return false;
   if (pr.mergeable !== "MERGEABLE") return false;
+  if (!hasApproval(pr)) return false;
   return pr.statusCheckRollup.every((check) => {
     const conclusion = getConclusion(check);
     return (

@@ -21,7 +21,7 @@ export function fetchPRs(cwd: string, search?: string): PullRequest[] {
     "pr",
     "list",
     "--json",
-    "number,title,author,mergeable,isDraft,statusCheckRollup,url",
+    "number,title,author,mergeable,isDraft,reviews,statusCheckRollup,url",
   ];
   if (search) {
     args.push("--search", search);
