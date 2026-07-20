@@ -9,7 +9,7 @@ import { StatusBar } from "./components/status-bar";
 import { HelpOverlay } from "./components/help-overlay";
 import type { PullRequest, ViewMode } from "./types";
 
-const POLL_INTERVAL = 20000;
+const POLL_INTERVAL = 30000;
 const subs = new SubscriptionManager();
 
 interface AppProps {
