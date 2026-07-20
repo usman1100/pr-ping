@@ -8,10 +8,11 @@ import { DetailPanel } from "./components/detail-panel";
 import { StatusBar } from "./components/status-bar";
 import { HelpOverlay } from "./components/help-overlay";
 import type { PullRequest, ViewMode, RepoConfig } from "./types";
-import { getRepoDisplayName } from "./lib/github";
+import { getRepoDisplayName, fetchPRDetail } from "./lib/github";
 import { logger } from "./lib/logger";
 
 const POLL_INTERVAL = 30000;
+const PRS_PER_PAGE = 15;
 const subs = new SubscriptionManager();
 
 interface AppProps {
@@ -40,7 +41,12 @@ export default function App({ repoConfig }: AppProps) {
     viewMode,
   );
   const [cursor, setCursor] = useState(0);
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(prs.length / PRS_PER_PAGE));
+  const pagePrs = prs.slice((page - 1) * PRS_PER_PAGE, page * PRS_PER_PAGE);
   const [detailPr, setDetailPr] = useState<PullRequest | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const detailFetchIdRef = useRef(0);
   const [subVersion, setSubVersion] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
 
@@ -52,10 +58,16 @@ export default function App({ repoConfig }: AppProps) {
   const prevViewModeRef = useRef<ViewMode>({ type: "all" });
 
   useEffect(() => {
-    if (cursor >= prs.length && prs.length > 0) {
-      setCursor(prs.length - 1);
+    if (page > totalPages) {
+      setPage(totalPages);
     }
-  }, [prs.length, cursor]);
+  }, [totalPages, page]);
+
+  useEffect(() => {
+    if (cursor >= pagePrs.length && pagePrs.length > 0) {
+      setCursor(pagePrs.length - 1);
+    }
+  }, [pagePrs.length, cursor]);
 
   const toggleSub = useCallback((num: number) => {
     subs.toggle(num);
@@ -82,11 +94,23 @@ export default function App({ repoConfig }: AppProps) {
         return;
       }
 
+      // Page navigation
+      if ((input === "[" || key.leftArrow) && page > 1) {
+        setPage((p) => p - 1);
+        setCursor(0);
+        setDetailPr(null);
+      }
+      if ((input === "]" || key.rightArrow) && page < totalPages) {
+        setPage((p) => p + 1);
+        setCursor(0);
+        setDetailPr(null);
+      }
+
       // Navigation
       if (key.upArrow && cursor > 0) {
         setCursor((c) => c - 1);
       }
-      if (key.downArrow && cursor < prs.length - 1) {
+      if (key.downArrow && cursor < pagePrs.length - 1) {
         setCursor((c) => c + 1);
       }
       if ((key.upArrow || key.downArrow) && detailPr) {
@@ -97,21 +121,40 @@ export default function App({ repoConfig }: AppProps) {
       if (input === "k" && cursor > 0) {
         setCursor((c) => c - 1);
       }
-      if (input === "j" && cursor < prs.length - 1) {
+      if (input === "j" && cursor < pagePrs.length - 1) {
         setCursor((c) => c + 1);
       }
       if (input === "g" && !key.ctrl) {
         setCursor(0);
       }
       if (input === "G") {
-        setCursor(prs.length - 1);
+        setCursor(pagePrs.length - 1);
       }
 
       // Detail toggle
-      if (key.return && prs[cursor]) {
-        setDetailPr((prev) =>
-          prev?.number === prs[cursor]!.number ? null : prs[cursor]!,
-        );
+      if (key.return && pagePrs[cursor]) {
+        const pr = pagePrs[cursor]!;
+        const isClosing = detailPr?.number === pr.number;
+        if (isClosing) {
+          setDetailPr(null);
+        } else {
+          setDetailPr(pr);
+          setDetailLoading(true);
+          const id = ++detailFetchIdRef.current;
+          fetchPRDetail(repoConfig, pr.number).then((detail) => {
+            if (id === detailFetchIdRef.current) {
+              setDetailPr((prev) =>
+                prev?.number === pr.number ? { ...pr, ...detail } : prev,
+              );
+              setDetailLoading(false);
+            }
+          }).catch((err) => {
+            if (id === detailFetchIdRef.current) {
+              logger.error({ pr: pr.number, err }, "failed to fetch PR detail");
+              setDetailLoading(false);
+            }
+          });
+        }
       }
       if (key.escape) {
         setDetailPr(null);
@@ -135,26 +178,25 @@ export default function App({ repoConfig }: AppProps) {
       }
 
       // Subscribe
-      if (input === "s" && prs[cursor]) {
-        const pr = prs[cursor]!;
+      if (input === "s" && pagePrs[cursor]) {
+        const pr = pagePrs[cursor]!;
         toggleSub(pr.number);
         logger.info({ pr: pr.number, subscribed: subs.has(pr.number) }, "subscribe toggle");
-        // If on subscribed tab, re-render will reflect the change
         if (viewMode.type === "subscribed") {
           refresh();
         }
       }
 
       // Open in browser
-      if (input === "o" && prs[cursor]) {
-        logger.info({ pr: prs[cursor]!.number, url: prs[cursor]!.url }, "opening in browser");
-        openURL(prs[cursor]!.url);
+      if (input === "o" && pagePrs[cursor]) {
+        logger.info({ pr: pagePrs[cursor]!.number, url: pagePrs[cursor]!.url }, "opening in browser");
+        openURL(pagePrs[cursor]!.url);
       }
 
       // Copy URL
-      if (input === "y" && prs[cursor]) {
-        logger.info({ pr: prs[cursor]!.number }, "copying URL");
-        copyURL(prs[cursor]!.url);
+      if (input === "y" && pagePrs[cursor]) {
+        logger.info({ pr: pagePrs[cursor]!.number }, "copying URL");
+        copyURL(pagePrs[cursor]!.url);
       }
 
       // Refresh
@@ -226,7 +268,7 @@ export default function App({ repoConfig }: AppProps) {
           <Box flexDirection="column" flexGrow={1}>
             <Box flexGrow={1} overflowY="hidden">
               <PRList
-                prs={prs}
+                prs={pagePrs}
                 cursor={cursor}
                 error={error}
                 subs={subs}
@@ -235,13 +277,18 @@ export default function App({ repoConfig }: AppProps) {
               />
             </Box>
             <Box height={detailHeight} overflowY="hidden">
-              <DetailPanel pr={detailPr} subs={subs} subVersion={subVersion} />
+              <DetailPanel
+                pr={detailPr}
+                subs={subs}
+                subVersion={subVersion}
+                loading={detailLoading}
+              />
             </Box>
           </Box>
         ) : (
           <Box flexGrow={1} overflowY="hidden">
             <PRList
-              prs={prs}
+              prs={pagePrs}
               cursor={cursor}
               error={error}
               subs={subs}
@@ -257,6 +304,8 @@ export default function App({ repoConfig }: AppProps) {
         prCount={prs.length}
         readyCount={readyCount}
         subCount={subs.count}
+        currentPage={page}
+        totalPages={totalPages}
         pollInterval={POLL_INTERVAL}
         lastUpdated={lastUpdated}
         error={error}

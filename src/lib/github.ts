@@ -40,18 +40,17 @@ export function checkAuth(): void {
   logger.info("gh auth ok");
 }
 
+const LIST_FIELDS = "number,title,state,createdAt,updatedAt,author,mergeable,isDraft,labels,url";
+
+const DETAIL_FIELDS = "body,reviews,reviewRequests,statusCheckRollup,url";
+
 export async function fetchPRs(
   config: RepoConfig,
   search?: string,
   author?: string,
 ): Promise<PullRequest[]> {
   const subcommand = [
-    "pr",
-    "list",
-    "--limit",
-    "100",
-    "--json",
-    "number,title,body,state,createdAt,updatedAt,author,mergeable,isDraft,labels,reviews,reviewRequests,statusCheckRollup,url",
+    "pr", "list", "--limit", "100", "--json", LIST_FIELDS,
   ];
   if (search) {
     subcommand.push("--search", search);
@@ -82,6 +81,38 @@ export async function fetchPRs(
   const prs = JSON.parse(stdout) as PullRequest[];
   logger.info({ count: prs.length, author, search }, "PRs fetched");
   return prs;
+}
+
+export async function fetchPRDetail(
+  config: RepoConfig,
+  number: number,
+): Promise<Partial<PullRequest>> {
+  logger.debug({ pr: number }, "fetching PR detail");
+  const args = ghArgs(config, [
+    "pr", "view", String(number), "--json", DETAIL_FIELDS,
+  ]);
+  const proc = Bun.spawn(args, ghSpawnOpts(config));
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  const exitCode = await proc.exited;
+
+  if (exitCode !== 0) {
+    if (
+      stderr.toLowerCase().includes("rate limit") ||
+      stderr.toLowerCase().includes("rate_limit")
+    ) {
+      logger.warn({ stderr }, "rate limit hit fetching PR detail");
+      throw new RateLimitError(stderr);
+    }
+    logger.error({ exitCode, stderr, pr: number }, "gh pr view failed");
+    throw new Error(`gh pr view #${number} failed: ${stderr}`);
+  }
+
+  const detail = JSON.parse(stdout) as Partial<PullRequest>;
+  logger.debug({ pr: number }, "PR detail fetched");
+  return detail;
 }
 
 export async function fetchMergedPRNumbers(config: RepoConfig): Promise<number[]> {
